@@ -2,7 +2,6 @@
     <string name="app_name">MDB Socials</string>
     <string name="to_signup"><u>Sign up here</u></string>
     <string name="to_login"><u>Log in here</u></string>
-    <string name="title_activity_feed">FeedActivity</string>
     <string name="interested_btn">Interested</string>
     <string name="not_interested_btn">Not Interested</string>
 </resources>

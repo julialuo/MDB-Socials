@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 
 /**
- * Created by hp on 2/17/2017.
+ * Created by Julia Luo on 2/17/2017.
  */
 
 public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.CustomViewHolder> {
@@ -41,7 +41,6 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.CustomViewHold
         this.context = context;
         this.data = data;
     }
-
 
     @Override
     public CustomViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -63,6 +62,7 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.CustomViewHold
                 Intent intent = new Intent(context, DetailsActivity.class);
                 intent.putExtra("SOCIAL_ID", social.getId());
                 intent.putExtra("IMAGE_NAME", social.getImageName());
+                FeedActivity.leavingApp = false;
                 context.startActivity(intent);
             }
         });

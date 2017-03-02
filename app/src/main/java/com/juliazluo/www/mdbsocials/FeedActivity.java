@@ -14,6 +14,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.CheckBox;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -29,14 +30,23 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 
+/*
+ASK:
+Asynctask
+Implementing onClickListener
+Is having feed activity as main activity okay?
+ */
 public class FeedActivity extends AppCompatActivity {
 
+    private static final String CLASS_NAME = "FeedActivity";
     private ArrayList<Social> socials;
     private FeedAdapter adapter;
     private DatabaseReference ref = FirebaseDatabase.getInstance().getReference("/socialsList");
     private FirebaseAuth.AuthStateListener mAuthListener;
     private HashMap<String, Social> socialHashMap;
     private static FirebaseAuth mAuth;
+    private boolean rememberMe;
+    protected static boolean leavingApp = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,14 +54,13 @@ public class FeedActivity extends AppCompatActivity {
         setContentView(R.layout.activity_feed);
         Toolbar myToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(myToolbar);
-        Log.i("Got", "here");
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.i("Got", "here");
                 Intent intent = new Intent(getApplicationContext(), NewSocialActivity.class);
+                leavingApp = false;
                 startActivity(intent);
             }
         });
@@ -63,10 +72,10 @@ public class FeedActivity extends AppCompatActivity {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user != null) {
                     // User is signed in
-                    Log.i("User", "onAuthStateChanged:signed_in:" + user.getUid());
+                    Log.i(CLASS_NAME, "onAuthStateChanged:signed_in:" + user.getUid());
                 } else {
                     // User is signed out
-                    Log.i("User", "onAuthStateChanged:signed_out");
+                    Log.i(CLASS_NAME, "onAuthStateChanged:signed_out");
                     Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
                     startActivity(intent);
                 }
@@ -156,6 +165,9 @@ public class FeedActivity extends AppCompatActivity {
     public void onStart() {
         super.onStart();
         mAuth.addAuthStateListener(mAuthListener);
+        Intent intent = getIntent();
+        rememberMe = intent.getBooleanExtra(LoginActivity.REMEMBER_ME, rememberMe);
+        leavingApp = true;
     }
 
     @Override
@@ -163,6 +175,9 @@ public class FeedActivity extends AppCompatActivity {
         super.onStop();
         if (mAuthListener != null) {
             mAuth.removeAuthStateListener(mAuthListener);
+        }
+        if (leavingApp && !rememberMe) {
+            mAuth.signOut();
         }
     }
 

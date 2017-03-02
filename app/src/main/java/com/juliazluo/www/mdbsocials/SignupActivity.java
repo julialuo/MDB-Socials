@@ -39,15 +39,16 @@ import java.util.Date;
 
 import static android.provider.CalendarContract.CalendarCache.URI;
 
-public class SignupActivity extends AppCompatActivity {
+public class SignupActivity extends AppCompatActivity implements View.OnClickListener{
 
-    private final int REQUEST_GALLERY = 2;
-    private final int REQUEST_IMAGE_CAPTURE = 1;
+    private static final String CLASS_NAME = "SignupActivity";
+    private static final int REQUEST_GALLERY = 2;
+    private static final int REQUEST_IMAGE_CAPTURE = 1;
     private static FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
     private StorageReference storageRef;
     private TextView nameText;
-    private String mCurrentPhotoPath, userImageUri;
+    private String userImageUri;
     private Uri dataIn;
     private static int userNum = 0;
 
@@ -66,7 +67,7 @@ public class SignupActivity extends AppCompatActivity {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user != null) {
                     // User is signed in
-                    Log.i("User", "onAuthStateChanged:signed_in:" + user.getUid());
+                    Log.i(CLASS_NAME, "onAuthStateChanged:signed_in:" + user.getUid());
                     UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
                             .setDisplayName(nameText.getText().toString())
                             .setPhotoUri(Uri.parse(userImageUri))
@@ -75,7 +76,8 @@ public class SignupActivity extends AppCompatActivity {
                         @Override
                         public void onComplete(@NonNull Task<Void> task) {
                             if (task.isSuccessful()) {
-                                mAuth.signOut(); //DUE TO BUG IN FIREBASE in loading displayname and image right after registration
+                                //DUE TO BUG IN FIREBASE in loading displayname and image right after registration
+                                mAuth.signOut();
                                 Toast.makeText(SignupActivity.this, "Success! Please log in with your new account",
                                         Toast.LENGTH_SHORT).show();
                                 Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
@@ -90,27 +92,9 @@ public class SignupActivity extends AppCompatActivity {
             }
         };
 
-        ((Button) findViewById(R.id.profile_pic_btn)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectImageOption();
-            }
-        });
-
-        ((Button) findViewById(R.id.signup_btn)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                attemptUpload();
-            }
-        });
-
-        ((TextView) findViewById(R.id.to_login)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
-                startActivity(intent);
-            }
-        });
+        ((Button) findViewById(R.id.profile_pic_btn)).setOnClickListener(this);
+        ((Button) findViewById(R.id.signup_btn)).setOnClickListener(this);
+        ((TextView) findViewById(R.id.to_login)).setOnClickListener(this);
     }
 
     @Override
@@ -127,73 +111,14 @@ public class SignupActivity extends AppCompatActivity {
         }
     }
 
-    private void selectImageOption() {
-        final CharSequence[] items = { "Take Photo", "Choose from Library",
-                "Cancel" };
-        AlertDialog.Builder builder = new AlertDialog.Builder(SignupActivity.this);
-        builder.setTitle("Add Image");
-        builder.setItems(items, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int item) {
-                if (items[item].equals("Take Photo")) {
-                    dispatchTakePictureIntent();
-                } else if (items[item].equals("Choose from Library")) {
-                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                    intent.setType("image/*");
-                    startActivityForResult(intent, REQUEST_GALLERY);
-                } else if (items[item].equals("Cancel")) {
-                    dialog.dismiss();
-                }
-            }
-        });
-        builder.show();
+    private void selectImage() {
+        Utils.selectImageOption(this, REQUEST_GALLERY, REQUEST_IMAGE_CAPTURE, CLASS_NAME);
     }
-
-    private void dispatchTakePictureIntent() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        // Ensure that there's a camera activity to handle the intent
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            // Create the File where the photo should go
-            File photoFile = null;
-            try {
-                photoFile = createImageFile();
-            } catch (IOException ex) {
-                // Error occurred while creating the File...
-            }
-            // Continue only if the File was successfully created
-            if (photoFile != null) {
-                Uri photoURI = FileProvider.getUriForFile(this,
-                        "com.example.android.fileprovider",
-                        photoFile);
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-            }
-        }
-    }
-
-    private File createImageFile() throws IOException {
-        // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".png",         /* suffix */
-                storageDir      /* directory */
-        );
-        mCurrentPhotoPath = image.getAbsolutePath();
-        return image;
-    }
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            File f = new File(mCurrentPhotoPath);
-            dataIn = Uri.fromFile(f);
-        } else if (resultCode == RESULT_OK && requestCode == REQUEST_GALLERY) {
-            dataIn = data.getData();
-        }
+        dataIn = Utils.getImageURI(requestCode, resultCode, data, REQUEST_IMAGE_CAPTURE, RESULT_OK,
+                REQUEST_GALLERY);
     }
 
     private void attemptUpload() {
@@ -213,7 +138,7 @@ public class SignupActivity extends AppCompatActivity {
                         @Override
                         public void onFailure(@NonNull Exception exception) {
                             // Handle unsuccessful uploads
-                            Log.i("Got", "failed upload " + exception.getMessage());
+                            Log.i(CLASS_NAME, "Failed upload " + exception.getMessage());
                             Toast.makeText(SignupActivity.this, "Image upload failed",
                                     Toast.LENGTH_SHORT).show();
                         }
@@ -221,14 +146,16 @@ public class SignupActivity extends AppCompatActivity {
                     .addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onProgress(UploadTask.TaskSnapshot taskSnapshot) {
-                            int progress = (int) ((100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount());
+                            int progress = (int) ((100.0 * taskSnapshot.getBytesTransferred()) /
+                                    taskSnapshot.getTotalByteCount());
                             Toast.makeText(SignupActivity.this, "Photo upload is " + progress + "% done",
                                     Toast.LENGTH_SHORT).show();
                         }
                     });
 
         } else {
-            userImageUri = "https://firebasestorage.googleapis.com/v0/b/mdbsocials-e7639.appspot.com/o/default_member.png?alt=media&token=023caaae-d694-469a-961d-402c29f425c8";
+            userImageUri = "https://firebasestorage.googleapis.com/v0/b/mdbsocials-e7639.appspot.com/" +
+                    "o/default_member.png?alt=media&token=023caaae-d694-469a-961d-402c29f425c8";
             attemptSignup();
         }
     }
@@ -244,7 +171,7 @@ public class SignupActivity extends AppCompatActivity {
                     .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                         @Override
                         public void onComplete(@NonNull Task<AuthResult> task) {
-                            Log.d("User", "createUserWithEmail:onComplete:" + task.isSuccessful());
+                            Log.d(CLASS_NAME, "createUserWithEmail:onComplete:" + task.isSuccessful());
 
                             // If sign in fails, display a message to the user. If sign in succeeds
                             // the auth state listener will be notified and logic to handle the
@@ -264,6 +191,22 @@ public class SignupActivity extends AppCompatActivity {
         } else {
             Toast.makeText(SignupActivity.this, "Your email and password cannot be blank",
                     Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch(v.getId()) {
+            case R.id.profile_pic_btn:
+                selectImage();
+                break;
+            case R.id.signup_btn:
+                attemptUpload();
+                break;
+            case R.id.to_login:
+                Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+                startActivity(intent);
+                break;
         }
     }
 }

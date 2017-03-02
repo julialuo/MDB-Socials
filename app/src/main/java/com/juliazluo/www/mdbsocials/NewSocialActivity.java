@@ -16,6 +16,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
+import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,19 +41,20 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-public class NewSocialActivity extends AppCompatActivity {
+public class NewSocialActivity extends AppCompatActivity implements View.OnClickListener{
 
-    static final int REQUEST_IMAGE_CAPTURE = 1;
-    static final int REQUEST_GALLERY = 2;
+    private static final int REQUEST_IMAGE_CAPTURE = 1;
+    private static final int REQUEST_GALLERY = 2;
+    private static final String CLASS_NAME = "NewSocialActivity";
     private Uri dataIn;
-    private StorageReference storageRef, specificRef;
+    private StorageReference storageRef;
     private DatabaseReference socialsListRef, socialDetailsRef;
-    private TextView name, description, date;
+    private EditText name, description, date;
     private static FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
     private FirebaseUser user;
-    private String mCurrentPhotoPath;
     private Calendar calendar;
+    private DatePickerDialog.OnDateSetListener dateSetListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +62,6 @@ public class NewSocialActivity extends AppCompatActivity {
         setContentView(R.layout.activity_new_social);
 
         storageRef = FirebaseStorage.getInstance().getReference();
-        specificRef = FirebaseStorage.getInstance().getReference();
         socialsListRef= FirebaseDatabase.getInstance().getReference("/socialsList");
         socialDetailsRef= FirebaseDatabase.getInstance().getReference("/socialDetails");
 
@@ -80,25 +81,14 @@ public class NewSocialActivity extends AppCompatActivity {
             }
         };
 
-        ((Button) findViewById(R.id.add_image_btn)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectImageOption();
-            }
-        });
+        ((Button) findViewById(R.id.add_image_btn)).setOnClickListener(this);
+        ((Button) findViewById(R.id.add_new_btn)).setOnClickListener(this);
 
-        ((Button) findViewById(R.id.add_new_btn)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                submit();
-            }
-        });
+        name = (EditText) findViewById(R.id.name_new);
+        description = (EditText) findViewById(R.id.description_new);
+        date = (EditText) findViewById(R.id.date_new);
 
-        name = (TextView) findViewById(R.id.name_new);
-        description = (TextView) findViewById(R.id.description_new);
-        date = (TextView) findViewById(R.id.date_new);
-
-        final DatePickerDialog.OnDateSetListener dateSetListener = new DatePickerDialog.OnDateSetListener() {
+        dateSetListener = new DatePickerDialog.OnDateSetListener() {
 
             @Override
             public void onDateSet(DatePicker view, int year, int monthOfYear,
@@ -110,17 +100,7 @@ public class NewSocialActivity extends AppCompatActivity {
             }
         };
 
-        date.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                // TODO Auto-generated method stub
-                new DatePickerDialog(NewSocialActivity.this, dateSetListener, calendar
-                        .get(Calendar.YEAR), calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)).show();
-            }
-        });
-
+        date.setOnClickListener(this);
     }
 
     private void updateLabel() {
@@ -146,73 +126,14 @@ public class NewSocialActivity extends AppCompatActivity {
         dataIn = null;
     }
 
-    private void selectImageOption() {
-        final CharSequence[] items = { "Take Photo", "Choose from Library",
-                "Cancel" };
-        AlertDialog.Builder builder = new AlertDialog.Builder(NewSocialActivity.this);
-        builder.setTitle("Add Image");
-        builder.setItems(items, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int item) {
-                if (items[item].equals("Take Photo")) {
-                    dispatchTakePictureIntent();
-                } else if (items[item].equals("Choose from Library")) {
-                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                    intent.setType("image/*");
-                    startActivityForResult(intent, REQUEST_GALLERY);
-                } else if (items[item].equals("Cancel")) {
-                    dialog.dismiss();
-                }
-            }
-        });
-        builder.show();
+    private void selectImage() {
+        Utils.selectImageOption(this, REQUEST_GALLERY, REQUEST_IMAGE_CAPTURE, CLASS_NAME);
     }
-
-    private void dispatchTakePictureIntent() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        // Ensure that there's a camera activity to handle the intent
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            // Create the File where the photo should go
-            File photoFile = null;
-            try {
-                photoFile = createImageFile();
-            } catch (IOException ex) {
-                // Error occurred while creating the File...
-            }
-            // Continue only if the File was successfully created
-            if (photoFile != null) {
-                Uri photoURI = FileProvider.getUriForFile(this,
-                        "com.example.android.fileprovider",
-                        photoFile);
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-            }
-        }
-    }
-
-    private File createImageFile() throws IOException {
-        // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".png",         /* suffix */
-                storageDir      /* directory */
-        );
-        mCurrentPhotoPath = image.getAbsolutePath();
-        return image;
-    }
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            File f = new File(mCurrentPhotoPath);
-            dataIn = Uri.fromFile(f);
-        } else if (resultCode == RESULT_OK && requestCode == REQUEST_GALLERY) {
-            dataIn = data.getData();
-        }
+        dataIn = Utils.getImageURI(requestCode, resultCode, data, REQUEST_IMAGE_CAPTURE, RESULT_OK,
+                REQUEST_GALLERY);
     }
 
     public void submit() {
@@ -221,17 +142,15 @@ public class NewSocialActivity extends AppCompatActivity {
         final String dateTxt = date.getText().toString();
 
         final String id = socialsListRef.push().getKey();
-        specificRef = storageRef.child(id + ".png");
+        final String imageName = id + ".png";
+
+        Social newSocial = new Social(id, nameTxt, user.getEmail(), 0, imageName, 0);
 
         if (dataIn != null) {
-            specificRef.putFile(dataIn)
+            storageRef.child(id + ".png").putFile(dataIn)
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                            // Get a URL to the uploaded content
-                            Log.i("Got", "to image listener");
-                            Uri downloadUrl = taskSnapshot.getDownloadUrl();
-
                             //Push data to socials list ref node
                             socialsListRef.child(id).child("imageName").setValue(id + ".png");
                             socialsListRef.child(id).child("name").setValue(nameTxt);
@@ -255,7 +174,7 @@ public class NewSocialActivity extends AppCompatActivity {
                         @Override
                         public void onFailure(@NonNull Exception exception) {
                             // Handle unsuccessful uploads
-                            Log.i("Got", "failed upload " + exception.getMessage());
+                            Log.i(CLASS_NAME, "failed upload " + exception.getMessage());
                             Toast.makeText(NewSocialActivity.this, "Image upload failed",
                                     Toast.LENGTH_SHORT).show();
                         }
@@ -263,7 +182,8 @@ public class NewSocialActivity extends AppCompatActivity {
                     .addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onProgress(UploadTask.TaskSnapshot taskSnapshot) {
-                            int progress = (int) ((100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount());
+                            int progress = (int) ((100.0 * taskSnapshot.getBytesTransferred())
+                                    / taskSnapshot.getTotalByteCount());
                             Toast.makeText(NewSocialActivity.this, "Photo upload is " + progress + "% done",
                                     Toast.LENGTH_SHORT).show();
                         }
@@ -290,6 +210,23 @@ public class NewSocialActivity extends AppCompatActivity {
 
             Intent intent = new Intent(getApplicationContext(), FeedActivity.class);
             startActivity(intent);
+        }
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch(v.getId()) {
+            case R.id.add_image_btn:
+                selectImage();
+                break;
+            case R.id.add_new_btn:
+                submit();
+                break;
+            case R.id.date_new:
+                new DatePickerDialog(NewSocialActivity.this, dateSetListener, calendar
+                        .get(Calendar.YEAR), calendar.get(Calendar.MONTH),
+                        calendar.get(Calendar.DAY_OF_MONTH)).show();
+                break;
         }
     }
 }

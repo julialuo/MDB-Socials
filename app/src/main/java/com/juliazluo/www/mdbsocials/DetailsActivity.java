@@ -34,8 +34,9 @@ import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 
-public class DetailsActivity extends AppCompatActivity {
+public class DetailsActivity extends AppCompatActivity implements View.OnClickListener{
 
+    private static final String CLASS_NAME = "DetailsActivity";
     private DatabaseReference detailsRef, socialsListRef;
     private StorageReference storageRef;
     private FirebaseAuth.AuthStateListener mAuthListener;
@@ -47,6 +48,7 @@ public class DetailsActivity extends AppCompatActivity {
     private String id, displayName;
     private Uri profileUri;
     private long numInterested;
+    private PopupWindow popupWindow;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,33 +85,18 @@ public class DetailsActivity extends AppCompatActivity {
                             profileUri = userInfo.getPhotoUrl();
                         }
                     }
-                    Log.i("User", "onAuthStateChanged:signed_in:" + user.getUid());
+                    Log.i(CLASS_NAME, "onAuthStateChanged:signed_in:" + user.getUid());
                 } else {
                     // User is signed out
-                    Log.i("User", "onAuthStateChanged:signed_out");
+                    Log.i(CLASS_NAME, "onAuthStateChanged:signed_out");
                     Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
                     startActivity(intent);
                 }
             }
         };
 
-        numInterestedBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showPopup();
-            }
-        });
-
-        interestedBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (interestedBtn.getText().toString() == "Interested") {
-                    incrementInterested();
-                } else {
-                    decrementInterested();
-                }
-            }
-        });
+        numInterestedBtn.setOnClickListener(this);
+        interestedBtn.setOnClickListener(this);
     }
 
     @Override
@@ -148,7 +135,7 @@ public class DetailsActivity extends AppCompatActivity {
             @Override
             public void onCancelled(DatabaseError error) {
                 // Failed to read value
-                Log.w("Database", "Failed to read value.", error.toException());
+                Log.i(CLASS_NAME, "Failed to read value.", error.toException());
             }
         });
 
@@ -163,7 +150,7 @@ public class DetailsActivity extends AppCompatActivity {
         }).addOnFailureListener(new OnFailureListener() {
             @Override
             public void onFailure(@NonNull Exception exception) {
-                Log.i("Storage", "Couldn't find file");
+                Log.i(CLASS_NAME, "Couldn't find file");
             }
         });
     }
@@ -193,7 +180,7 @@ public class DetailsActivity extends AppCompatActivity {
 
     private void showPopup() {
         final View popupView = LayoutInflater.from(this).inflate(R.layout.interested_popup, null);
-        final PopupWindow popupWindow = new PopupWindow(popupView, 1000, ViewGroup.LayoutParams.WRAP_CONTENT);
+        popupWindow = new PopupWindow(popupView, 1000, ViewGroup.LayoutParams.WRAP_CONTENT);
         RecyclerView recyclerView = (RecyclerView) popupView.findViewById(R.id.interested_recycler);
         final ArrayList<User> users = new ArrayList<>();
         final PopupAdapter adapter = new PopupAdapter(getApplicationContext(), users);
@@ -221,7 +208,7 @@ public class DetailsActivity extends AppCompatActivity {
             @Override
             public void onCancelled(DatabaseError error) {
                 // Failed to read value
-                Log.w("Database", "Failed to read value.", error.toException());
+                Log.i(CLASS_NAME , "Failed to read value.", error.toException());
             }
         });
 
@@ -229,13 +216,27 @@ public class DetailsActivity extends AppCompatActivity {
         RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getApplicationContext());
         recyclerView.setLayoutManager(mLayoutManager);
 
-        ((Button) popupView.findViewById(R.id.popup_exit_btn)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                popupWindow.dismiss();
-            }
-        });
-
+        ((Button) popupView.findViewById(R.id.popup_exit_btn)).setOnClickListener(this);
         popupWindow.showAtLocation(popupView, Gravity.CENTER, 0, 0);
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch(v.getId()) {
+            case R.id.num_interested_btn:
+                showPopup();
+                break;
+            case R.id.interested_btn:
+                if (interestedBtn.getText().toString() == "Interested") {
+                    incrementInterested();
+                } else {
+                    decrementInterested();
+                }
+                break;
+            case R.id.popup_exit_btn:
+                popupWindow.dismiss();
+                break;
+
+        }
     }
 }

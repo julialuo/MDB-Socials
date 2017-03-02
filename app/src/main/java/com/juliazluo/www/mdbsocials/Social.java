@@ -9,14 +9,6 @@ public class Social implements Comparable<Social> {
     private String id, name, email, imageName;
     private long numRSVP, timestamp;
 
-    public long getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-    }
-
     public Social(String id, String name, String email, long numRSVP, String imageName, long timestamp) {
         this.id = id;
         this.name = name;
@@ -24,7 +16,6 @@ public class Social implements Comparable<Social> {
         this.numRSVP = numRSVP;
         this.imageName = imageName;
         this.timestamp = timestamp;
-
     }
 
     public String getName() {
@@ -65,6 +56,14 @@ public class Social implements Comparable<Social> {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 
     @Override

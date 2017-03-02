@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -17,8 +18,10 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
 
+    private static final String CLASS_NAME = "LoginActivity";
+    protected static final String REMEMBER_ME = "RememberMe";
     private static FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
 
@@ -28,51 +31,9 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
         mAuth = FirebaseAuth.getInstance();
 
-        /*mAuthListener = new FirebaseAuth.AuthStateListener() {
-            @Override
-            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
-                FirebaseUser user = firebaseAuth.getCurrentUser();
-                if (user != null) {
-                    // User is signed in
-                    Log.i("User", "onAuthStateChanged:signed_in:" + user.getUid());
-                    Intent intent = new Intent(getApplicationContext(), FeedActivity.class);
-                    startActivity(intent);
-                } else {
-                    // User is signed out
-                    Log.i("User", "onAuthStateChanged:signed_out");
-                }
-            }
-        };*/
-
-        ((Button) findViewById(R.id.login_btn)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                attemptLogin();
-            }
-        });
-
-        ((TextView) findViewById(R.id.to_signup)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext(), SignupActivity.class);
-                startActivity(intent);
-            }
-        });
+        ((Button) findViewById(R.id.login_btn)).setOnClickListener(this);
+        ((TextView) findViewById(R.id.to_signup)).setOnClickListener(this);
     }
-    /*
-    @Override
-    public void onStart() {
-        super.onStart();
-        mAuth.addAuthStateListener(mAuthListener);
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        if (mAuthListener != null) {
-            mAuth.removeAuthStateListener(mAuthListener);
-        }
-    } */
 
     private void attemptLogin() {
         String email = ((EditText) findViewById(R.id.email_login)).getText().toString();
@@ -83,17 +44,19 @@ public class LoginActivity extends AppCompatActivity {
                     .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                         @Override
                         public void onComplete(@NonNull Task<AuthResult> task) {
-                            Log.d("User", "signInWithEmail:onComplete:" + task.isSuccessful());
+                            Log.d(CLASS_NAME, "signInWithEmail:onComplete:" + task.isSuccessful());
 
                             // If sign in fails, display a message to the user. If sign in succeeds
                             // the auth state listener will be notified and logic to handle the
                             // signed in user can be handled in the listener.
                             if (!task.isSuccessful()) {
-                                Log.w("User", "signInWithEmail:failed", task.getException());
+                                Log.w(CLASS_NAME, "signInWithEmail:failed", task.getException());
                                 Toast.makeText(LoginActivity.this, "Incorrect email or password, please try again",
                                         Toast.LENGTH_SHORT).show();
                             } else {
                                 Intent intent = new Intent(getApplicationContext(), FeedActivity.class);
+                                boolean rememberMe = ((CheckBox) findViewById(R.id.remember_me)).isChecked();
+                                intent.putExtra(REMEMBER_ME, rememberMe);
                                 startActivity(intent);
                             }
                         }
@@ -101,6 +64,19 @@ public class LoginActivity extends AppCompatActivity {
         } else {
             Toast.makeText(LoginActivity.this, "Please enter an email and password",
                     Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch(v.getId()) {
+            case R.id.login_btn:
+                attemptLogin();
+                break;
+            case R.id.to_signup:
+                Intent intent = new Intent(getApplicationContext(), SignupActivity.class);
+                startActivity(intent);
+                break;
         }
     }
 }
