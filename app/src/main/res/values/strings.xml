@@ -4,4 +4,25 @@
     <string name="to_login"><u>Log in here</u></string>
     <string name="interested_btn">Interested</string>
     <string name="not_interested_btn">Not Interested</string>
+    <string name="already_member">Already a member?</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="name_hint">Name</string>
+    <string name="email_hint">Email</string>
+    <string name="password_hint">Password</string>
+    <string name="confirm_hint">Confirm password</string>
+    <string name="choose_profile_picture">Choose profile picture</string>
+    <string name="not_member">Not a member?</string>
+    <string name="welcome_back">Welcome Back</string>
+    <string name="login">Log in</string>
+    <string name="remember_me">Remember me</string>
+    <string name="description_hint">Description</string>
+    <string name="name_social_hint">Name of social</string>
+    <string name="date_hint">Date</string>
+    <string name="add">Add</string>
+    <string name="add_social">Add New Social</string>
+    <string name="attach_image">Attach Image</string>
+    <string name="back">Back</string>
+
+
+
 </resources>

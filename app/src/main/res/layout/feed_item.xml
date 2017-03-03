@@ -23,7 +23,6 @@
             android:layout_marginBottom="16dp" />
 
         <TextView
-            android:text="Name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/feed_name"
@@ -40,7 +39,6 @@
             android:textColor="@color/colorAccent"/>
 
         <TextView
-            android:text="Organizer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/feed_email"
@@ -52,7 +50,6 @@
             android:textSize="16sp"/>
 
         <TextView
-            android:text="TextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/feed_attending"

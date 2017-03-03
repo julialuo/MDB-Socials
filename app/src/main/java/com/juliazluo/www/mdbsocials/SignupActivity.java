@@ -1,13 +1,8 @@
 package com.juliazluo.www.mdbsocials;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Environment;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
-import android.support.v4.content.FileProvider;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -39,11 +34,14 @@ import java.util.Date;
 
 import static android.provider.CalendarContract.CalendarCache.URI;
 
-public class SignupActivity extends AppCompatActivity implements View.OnClickListener{
+public class SignupActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final String CLASS_NAME = "SignupActivity";
     private static final int REQUEST_GALLERY = 2;
     private static final int REQUEST_IMAGE_CAPTURE = 1;
+    private static final String DEFAULT_IMAGE = "https://firebasestorage.googleapis.com/v0/b/" +
+            "mdbsocials-e7639.appspot.com/o/default_member.png?alt=media&token=023caaae-d694-469a" +
+            "-961d-402c29f425c8";
     private static FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
     private StorageReference storageRef;
@@ -57,10 +55,15 @@ public class SignupActivity extends AppCompatActivity implements View.OnClickLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
 
+        //Initiate activity components
         mAuth = FirebaseAuth.getInstance();
         storageRef = FirebaseStorage.getInstance().getReference();
         nameText = (TextView) findViewById(R.id.name_signup);
+        ((Button) findViewById(R.id.profile_pic_btn)).setOnClickListener(this);
+        ((Button) findViewById(R.id.signup_btn)).setOnClickListener(this);
+        ((TextView) findViewById(R.id.to_login)).setOnClickListener(this);
 
+        //Initiate user authentication listener
         mAuthListener = new FirebaseAuth.AuthStateListener() {
             @Override
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
@@ -68,6 +71,8 @@ public class SignupActivity extends AppCompatActivity implements View.OnClickLis
                 if (user != null) {
                     // User is signed in
                     Log.i(CLASS_NAME, "onAuthStateChanged:signed_in:" + user.getUid());
+
+                    //Update user profile with name and profile picture URI
                     UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
                             .setDisplayName(nameText.getText().toString())
                             .setPhotoUri(Uri.parse(userImageUri))
@@ -76,7 +81,7 @@ public class SignupActivity extends AppCompatActivity implements View.OnClickLis
                         @Override
                         public void onComplete(@NonNull Task<Void> task) {
                             if (task.isSuccessful()) {
-                                //DUE TO BUG IN FIREBASE in loading displayname and image right after registration
+                                //Log out user due to bug in Firebase about accessing name and profile image right after registration
                                 mAuth.signOut();
                                 Toast.makeText(SignupActivity.this, "Success! Please log in with your new account",
                                         Toast.LENGTH_SHORT).show();
@@ -91,10 +96,6 @@ public class SignupActivity extends AppCompatActivity implements View.OnClickLis
                 }
             }
         };
-
-        ((Button) findViewById(R.id.profile_pic_btn)).setOnClickListener(this);
-        ((Button) findViewById(R.id.signup_btn)).setOnClickListener(this);
-        ((TextView) findViewById(R.id.to_login)).setOnClickListener(this);
     }
 
     @Override
@@ -109,27 +110,33 @@ public class SignupActivity extends AppCompatActivity implements View.OnClickLis
         if (mAuthListener != null) {
             mAuth.removeAuthStateListener(mAuthListener);
         }
-    }
 
-    private void selectImage() {
-        Utils.selectImageOption(this, REQUEST_GALLERY, REQUEST_IMAGE_CAPTURE, CLASS_NAME);
+        //Remove currently selected image, if any
+        dataIn = null;
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        //Store image URI returned by camera or gallery intent
         dataIn = Utils.getImageURI(requestCode, resultCode, data, REQUEST_IMAGE_CAPTURE, RESULT_OK,
                 REQUEST_GALLERY);
     }
 
+    /**
+     * Attempt to upload the current image file to Firebase storage
+     */
     private void attemptUpload() {
+        //Generate unique image name for user
         String location = "user" + userNum + ".png";
         userNum += 1;
+
         if (dataIn != null) {
+            //Start upload of chosen image to the Firebase storage
             storageRef.child(location).putFile(dataIn)
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                            // Get a URL to the uploaded content
+                            //Store image URI and attempt to sign up the user
                             userImageUri = taskSnapshot.getDownloadUrl().toString();
                             attemptSignup();
                         }
@@ -137,7 +144,7 @@ public class SignupActivity extends AppCompatActivity implements View.OnClickLis
                     .addOnFailureListener(new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception exception) {
-                            // Handle unsuccessful uploads
+                            //Handle unsuccessful uploads
                             Log.i(CLASS_NAME, "Failed upload " + exception.getMessage());
                             Toast.makeText(SignupActivity.this, "Image upload failed",
                                     Toast.LENGTH_SHORT).show();
@@ -146,6 +153,7 @@ public class SignupActivity extends AppCompatActivity implements View.OnClickLis
                     .addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onProgress(UploadTask.TaskSnapshot taskSnapshot) {
+                            //Display progress of upload to user
                             int progress = (int) ((100.0 * taskSnapshot.getBytesTransferred()) /
                                     taskSnapshot.getTotalByteCount());
                             Toast.makeText(SignupActivity.this, "Photo upload is " + progress + "% done",
@@ -154,56 +162,60 @@ public class SignupActivity extends AppCompatActivity implements View.OnClickLis
                     });
 
         } else {
-            userImageUri = "https://firebasestorage.googleapis.com/v0/b/mdbsocials-e7639.appspot.com/" +
-                    "o/default_member.png?alt=media&token=023caaae-d694-469a-961d-402c29f425c8";
+            //Set image URI to default image and attempt to sign up the user
+            userImageUri = DEFAULT_IMAGE;
             attemptSignup();
         }
     }
 
+    /**
+     * Attempt to register the user into Firebase authentication
+     */
     private void attemptSignup() {
+        //Retrieve the user's input
         String email = ((EditText) findViewById(R.id.email_signup)).getText().toString();
         String password = ((EditText) findViewById(R.id.password_signup)).getText().toString();
         String confirm = ((EditText) findViewById(R.id.confirm_signup)).getText().toString();
 
         if (!email.equals("") && !password.equals("") && confirm.equals(password)) {
-            //Question 5: add sign up capability. Same results as log in.
+            //Use Firebase authentication to create new user with given email and password
             mAuth.createUserWithEmailAndPassword(email, password)
                     .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                         @Override
                         public void onComplete(@NonNull Task<AuthResult> task) {
-                            Log.d(CLASS_NAME, "createUserWithEmail:onComplete:" + task.isSuccessful());
+                            Log.i(CLASS_NAME, "createUserWithEmail:onComplete:" + task.isSuccessful());
 
-                            // If sign in fails, display a message to the user. If sign in succeeds
-                            // the auth state listener will be notified and logic to handle the
-                            // signed in user can be handled in the listener.
                             if (!task.isSuccessful()) {
+                                //Notify user that authentication failed
                                 Toast.makeText(SignupActivity.this, "Authentication failed, please " +
-                                        "try again",
+                                                "try again",
                                         Toast.LENGTH_SHORT).show();
-                            } else {
-
                             }
                         }
                     });
         } else if (!confirm.equals(password)) {
+            //Passwords do not match
             Toast.makeText(SignupActivity.this, "The two passwords do not match",
                     Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(SignupActivity.this, "Your email and password cannot be blank",
+            //Email or password is blank
+            Toast.makeText(SignupActivity.this, "Your email or password cannot be blank",
                     Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
     public void onClick(View v) {
-        switch(v.getId()) {
+        switch (v.getId()) {
             case R.id.profile_pic_btn:
-                selectImage();
+                //Open up image options menu and start either camera or gallery intent
+                Utils.selectImageOption(this, REQUEST_GALLERY, REQUEST_IMAGE_CAPTURE, CLASS_NAME);
                 break;
             case R.id.signup_btn:
                 attemptUpload();
                 break;
             case R.id.to_login:
+                //Proceed to login screen
                 Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
                 startActivity(intent);
                 break;

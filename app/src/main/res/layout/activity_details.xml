@@ -10,7 +10,6 @@
 
 
     <Button
-        android:text="Button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/num_interested_btn"
@@ -27,7 +26,6 @@
         android:layout_marginBottom="16dp"/>
 
     <Button
-        android:text="Interested"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/interested_btn"
@@ -60,7 +58,6 @@
             android:layout_height="match_parent">
 
             <TextView
-                android:text="TextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/date_detail"
@@ -70,7 +67,6 @@
                 android:textSize="16sp" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/email_detail"
@@ -80,7 +76,6 @@
                 android:textSize="16sp"/>
 
             <TextView
-                android:text="TextView"
                 android:layout_width="229dp"
                 android:layout_height="75dp"
                 android:contentDescription="@string/appbar_scrolling_view_behavior"
@@ -97,7 +92,6 @@
                 android:textSize="16sp" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/name_detail"

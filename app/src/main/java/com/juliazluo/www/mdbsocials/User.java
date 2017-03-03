@@ -13,6 +13,9 @@ public class User {
         this.imageURI = imageURI;
     }
 
+    public User() {
+    }
+
     public String getName() {
         return name;
     }

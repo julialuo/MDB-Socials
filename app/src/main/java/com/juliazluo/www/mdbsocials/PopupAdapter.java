@@ -1,22 +1,13 @@
 package com.juliazluo.www.mdbsocials;
 
 import android.content.Context;
-import android.content.Intent;
-import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-
-import com.bumptech.glide.Glide;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 
@@ -44,12 +35,12 @@ public class PopupAdapter extends RecyclerView.Adapter<PopupAdapter.CustomViewHo
 
     @Override
     public void onBindViewHolder(final CustomViewHolder holder, int position) {
+        //Display user information
         User user = data.get(position);
         holder.nameText.setText(user.getName());
-        Glide.with(context)
-            .load(user.getImageURI())
-            .override(150, 150)
-            .into(holder.image);
+
+        //Load the user profile picture into image view
+        new Utils.DownloadFilesTask(context, holder.image, 100).execute(user.getImageURI());
     }
 
 
@@ -65,8 +56,10 @@ public class PopupAdapter extends RecyclerView.Adapter<PopupAdapter.CustomViewHo
         TextView nameText;
         ImageView image;
 
-        public CustomViewHolder (View view) {
+        public CustomViewHolder(View view) {
             super(view);
+
+            //Initiate components on the ViewHolder (list item view)
             this.nameText = (TextView) view.findViewById(R.id.popup_name);
             this.image = (ImageView) view.findViewById(R.id.popup_image);
         }

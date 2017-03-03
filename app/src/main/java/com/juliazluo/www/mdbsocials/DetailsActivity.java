@@ -18,9 +18,6 @@ import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 
-import com.bumptech.glide.Glide;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserInfo;
@@ -34,7 +31,7 @@ import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 
-public class DetailsActivity extends AppCompatActivity implements View.OnClickListener{
+public class DetailsActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final String CLASS_NAME = "DetailsActivity";
     private DatabaseReference detailsRef, socialsListRef;
@@ -47,7 +44,7 @@ public class DetailsActivity extends AppCompatActivity implements View.OnClickLi
     private ImageView imageView;
     private String id, displayName;
     private Uri profileUri;
-    private long numInterested;
+    private int numInterested;
     private PopupWindow popupWindow;
 
     @Override
@@ -55,6 +52,7 @@ public class DetailsActivity extends AppCompatActivity implements View.OnClickLi
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_details);
 
+        //Initiate activity components
         detailsRef = FirebaseDatabase.getInstance().getReference("/socialDetails");
         socialsListRef = FirebaseDatabase.getInstance().getReference("/socialsList");
         storageRef = FirebaseStorage.getInstance().getReference();
@@ -65,8 +63,11 @@ public class DetailsActivity extends AppCompatActivity implements View.OnClickLi
         numInterestedBtn = (Button) findViewById(R.id.num_interested_btn);
         interestedBtn = (Button) findViewById(R.id.interested_btn);
         imageView = (ImageView) findViewById(R.id.image_detail);
-
+        numInterestedBtn.setOnClickListener(this);
+        interestedBtn.setOnClickListener(this);
         mAuth = FirebaseAuth.getInstance();
+
+        //Initiate user authentication listener
         mAuthListener = new FirebaseAuth.AuthStateListener() {
             @Override
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
@@ -74,6 +75,8 @@ public class DetailsActivity extends AppCompatActivity implements View.OnClickLi
                 if (user != null) {
                     // User is signed in
                     firebaseUser = user;
+
+                    //Retrieve the current user's name and profile image URI
                     displayName = user.getDisplayName();
                     profileUri = user.getPhotoUrl();
 
@@ -94,9 +97,6 @@ public class DetailsActivity extends AppCompatActivity implements View.OnClickLi
                 }
             }
         };
-
-        numInterestedBtn.setOnClickListener(this);
-        interestedBtn.setOnClickListener(this);
     }
 
     @Override
@@ -112,17 +112,22 @@ public class DetailsActivity extends AppCompatActivity implements View.OnClickLi
     protected void onStart() {
         super.onStart();
         mAuth.addAuthStateListener(mAuthListener);
+
+        //Retrieve the id and image name of the social
         Intent intent = getIntent();
-        id = intent.getStringExtra("SOCIAL_ID");
-        String imageName = intent.getStringExtra("IMAGE_NAME");
+        id = intent.getStringExtra(FeedAdapter.SOCIAL_ID);
+        String imageName = intent.getStringExtra(FeedAdapter.IMAGE_NAME);
+
         detailsRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                name.setText(dataSnapshot.child(id).child("name").getValue(String.class));
-                email.setText("Host: " + dataSnapshot.child(id).child("email").getValue(String.class));
-                description.setText(dataSnapshot.child(id).child("description").getValue(String.class));
-                date.setText("Date: " + dataSnapshot.child(id).child("date").getValue(String.class));
-                numInterested = dataSnapshot.child(id).child("numRSVP").getValue(Long.class);
+                //Retrieve the detailed social from database and update activity components based on the information
+                DetailedSocial social = dataSnapshot.child(id).child("social").getValue(DetailedSocial.class);
+                name.setText(social.getName());
+                email.setText("Host: " + social.getEmail());
+                description.setText(social.getDescription());
+                date.setText("Date: " + social.getDate());
+                numInterested = social.getNumRSVP();
                 numInterestedBtn.setText(numInterested + " Interested");
 
                 if (!dataSnapshot.child(id).child("usersRSVP").hasChild(firebaseUser.getUid())) {
@@ -139,67 +144,79 @@ public class DetailsActivity extends AppCompatActivity implements View.OnClickLi
             }
         });
 
-        storageRef.child(imageName).getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-            @Override
-            public void onSuccess(Uri uri) {
-                Glide.with(getApplicationContext())
-                        .load(uri)
-                        .override(300, 300)
-                        .into(imageView);
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception exception) {
-                Log.i(CLASS_NAME, "Couldn't find file");
-            }
-        });
+        //Load the social image into image view
+        Utils.loadImage(CLASS_NAME, imageName, this, imageView, 300);
     }
 
+    /**
+     * Increment the number of users interested in the social
+     */
     private void incrementInterested() {
         if (firebaseUser != null) {
-            detailsRef.child(id).child("usersRSVP").child(firebaseUser.getUid()).child("userName").setValue(displayName);
-            detailsRef.child(id).child("usersRSVP").child(firebaseUser.getUid()).child("userImage").setValue(profileUri.toString());
+            //Add user to RSVP list in database
+            User user = new User(displayName, profileUri.toString());
+            detailsRef.child(id).child("usersRSVP").child(firebaseUser.getUid()).setValue(user);
         }
+
+        //Increment the number of interested users
         numInterested += 1;
-        detailsRef.child(id).child("numRSVP").setValue(numInterested);
-        socialsListRef.child(id).child("numRSVP").setValue(numInterested);
-        numInterestedBtn.setText(numInterested + " Interested");
+        updateInterested();
         interestedBtn.setText("Not interested");
     }
 
+    /**
+     * Decrement the number of users interested in the social
+     */
     private void decrementInterested() {
         if (firebaseUser != null) {
+            //Remove user from RSVP list
             detailsRef.child(id).child("usersRSVP").child(firebaseUser.getUid()).removeValue();
         }
+
+        //Decrement the number of interested users
         numInterested -= 1;
-        detailsRef.child(id).child("numRSVP").setValue(numInterested);
-        socialsListRef.child(id).child("numRSVP").setValue(numInterested);
-        numInterestedBtn.setText(numInterested + " Interested");
+        updateInterested();
         interestedBtn.setText("Interested");
     }
 
+    /**
+     * Update Firebase database and button to reflect change in number of interested users
+     */
+    private void updateInterested() {
+        detailsRef.child(id).child("social").child("numRSVP").setValue(numInterested);
+        socialsListRef.child(id).child("social").child("numRSVP").setValue(numInterested);
+        numInterestedBtn.setText(numInterested + " Interested");
+    }
+
+    /**
+     * Display the popup with recycler view of interested users
+     */
     private void showPopup() {
+        //Initialize popup and recyclerview for the popup
         final View popupView = LayoutInflater.from(this).inflate(R.layout.interested_popup, null);
         popupWindow = new PopupWindow(popupView, 1000, ViewGroup.LayoutParams.WRAP_CONTENT);
         RecyclerView recyclerView = (RecyclerView) popupView.findViewById(R.id.interested_recycler);
         final ArrayList<User> users = new ArrayList<>();
-        final PopupAdapter adapter = new PopupAdapter(getApplicationContext(), users);
+        final PopupAdapter adapter = new PopupAdapter(this, users);
 
         detailsRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 TextView textView = (TextView) popupView.findViewById(R.id.popup_text);
+
                 if (dataSnapshot.child(id).child("usersRSVP").hasChildren()) {
                     for (DataSnapshot snapshot : dataSnapshot.child(id).child("usersRSVP").getChildren()) {
-                        String userName = snapshot.child("userName").getValue(String.class);
-                        String imageURI = snapshot.child("userImage").getValue(String.class);
-                        User newUser = new User(userName, imageURI);
-                        users.add(newUser);
+                        //Add user to the list of interested users
+                        User user = snapshot.getValue(User.class);
+                        users.add(user);
                     }
                     adapter.notifyDataSetChanged();
+
+                    //Effectively remove the textView meant for no users interested
                     textView.setText("");
                     textView.setHeight(0);
                 } else {
+                    //Display that no users are interested
                     ((TextView) popupView.findViewById(R.id.popup_text)).setText("No users interested yet");
                     ((TextView) popupView.findViewById(R.id.popup_text)).setHeight(120);
                 }
@@ -208,25 +225,28 @@ public class DetailsActivity extends AppCompatActivity implements View.OnClickLi
             @Override
             public void onCancelled(DatabaseError error) {
                 // Failed to read value
-                Log.i(CLASS_NAME , "Failed to read value.", error.toException());
+                Log.i(CLASS_NAME, "Failed to read value.", error.toException());
             }
         });
 
+        //Finalize adapter
         recyclerView.setAdapter(adapter);
         RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getApplicationContext());
         recyclerView.setLayoutManager(mLayoutManager);
 
+        //Finalize and display popup
         ((Button) popupView.findViewById(R.id.popup_exit_btn)).setOnClickListener(this);
         popupWindow.showAtLocation(popupView, Gravity.CENTER, 0, 0);
     }
 
     @Override
     public void onClick(View v) {
-        switch(v.getId()) {
+        switch (v.getId()) {
             case R.id.num_interested_btn:
                 showPopup();
                 break;
             case R.id.interested_btn:
+                //Check if user clicked "Interested" or "Not interested" and act accordingly
                 if (interestedBtn.getText().toString() == "Interested") {
                     incrementInterested();
                 } else {

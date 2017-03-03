@@ -7,15 +7,19 @@ package com.juliazluo.www.mdbsocials;
 public class Social implements Comparable<Social> {
 
     private String id, name, email, imageName;
-    private long numRSVP, timestamp;
+    private long timestamp;
+    private int numRSVP;
 
-    public Social(String id, String name, String email, long numRSVP, String imageName, long timestamp) {
+    public Social(String id, String name, String email, int numRSVP, String imageName, long timestamp) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.numRSVP = numRSVP;
         this.imageName = imageName;
         this.timestamp = timestamp;
+    }
+
+    public Social() {
     }
 
     public String getName() {
@@ -42,11 +46,11 @@ public class Social implements Comparable<Social> {
         this.imageName = imageName;
     }
 
-    public long getNumRSVP() {
+    public int getNumRSVP() {
         return numRSVP;
     }
 
-    public void setNumRSVP(long numRSVP) {
+    public void setNumRSVP(int numRSVP) {
         this.numRSVP = numRSVP;
     }
 
@@ -68,6 +72,7 @@ public class Social implements Comparable<Social> {
 
     @Override
     public int compareTo(Social other) {
+        //Compare socials by their timestamp
         return (int) (other.timestamp - this.timestamp);
     }
 }

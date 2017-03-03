@@ -6,27 +6,14 @@ package com.juliazluo.www.mdbsocials;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.net.Uri;
-import android.os.AsyncTask;
-import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.bumptech.glide.Glide;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
-
 import java.util.ArrayList;
-
-import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 
 /**
  * Created by Julia Luo on 2/17/2017.
@@ -34,6 +21,9 @@ import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 
 public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.CustomViewHolder> {
 
+    protected static final String SOCIAL_ID = "SocialID";
+    protected static final String IMAGE_NAME = "ImageName";
+    private static final String CLASS_NAME = "FeedAdapter";
     private Context context;
     private ArrayList<Social> data;
 
@@ -51,6 +41,7 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.CustomViewHold
 
     @Override
     public void onBindViewHolder(final CustomViewHolder holder, int position) {
+        //Display the social's information onto the ViewHolder
         final Social social = data.get(position);
         holder.nameText.setText(social.getName());
         holder.emailText.setText("Host: " + social.getEmail());
@@ -59,67 +50,17 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.CustomViewHold
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //Proceed to details activity with the ID and image name of the clicked social
                 Intent intent = new Intent(context, DetailsActivity.class);
-                intent.putExtra("SOCIAL_ID", social.getId());
-                intent.putExtra("IMAGE_NAME", social.getImageName());
+                intent.putExtra(SOCIAL_ID, social.getId());
+                intent.putExtra(IMAGE_NAME, social.getImageName());
                 FeedActivity.leavingApp = false;
                 context.startActivity(intent);
             }
         });
 
-        StorageReference storageRef = FirebaseStorage.getInstance().getReference();
-        storageRef.child(social.getImageName()).getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-            @Override
-            public void onSuccess(Uri uri) {
-                Glide.with(context)
-                        .load(uri)
-                        .override(150, 150)
-                        .into(holder.image);
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception exception) {
-                Log.i("Storage", "Couldn't find file");
-            }
-        });
-
-        /*
-        //haven't taught this yet but essentially it runs separately from the UI
-        class DownloadFilesTask extends AsyncTask<String, Void, Bitmap> {
-            protected Bitmap doInBackground(String... strings) {
-                try {return Glide.
-                        with(context).
-                        load(strings[0]).
-                        asBitmap().
-                        into(100, 100). // Width and height
-                        get();}
-                catch (Exception e) {return null;}
-            }
-
-            protected void onProgressUpdate(Void... progress) {}
-
-            protected void onPostExecute(Bitmap result) {
-                holder.imageView.setImageBitmap(result);
-            }
-        }
-
-        //Part 4: Load the image from the url. Use
-        // new DownloadFilesTask().execute(uri.toString())
-        // to get set the imageView using the resulting Uri. If it fails, log the exception
-
-        StorageReference storageRef = FirebaseStorage.getInstance().getReference();
-        storageRef.child(m.firebaseImageUrl).getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-            @Override
-            public void onSuccess(Uri uri) {
-                new DownloadFilesTask().execute(uri.toString());
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception exception) {
-                Log.i("Storage", "Couldn't find file");
-            }
-        });
-        //dw if it doesn't work, bc it didn't work for me :( */
+        //Load the social image into image view
+        Utils.loadImage(CLASS_NAME, social.getImageName(), context, holder.image, 120);
     }
 
 
@@ -135,8 +76,10 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.CustomViewHold
         TextView nameText, emailText, attendingText;
         ImageView image;
 
-        public CustomViewHolder (View view) {
+        public CustomViewHolder(View view) {
             super(view);
+
+            //Initiate components on the ViewHolder (list item view)
             this.nameText = (TextView) view.findViewById(R.id.feed_name);
             this.emailText = (TextView) view.findViewById(R.id.feed_email);
             this.attendingText = (TextView) view.findViewById(R.id.feed_attending);

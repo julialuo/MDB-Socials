@@ -10,7 +10,6 @@
         android:id="@+id/interested_recycler" />
 
     <TextView
-        android:text="TextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/popup_text"
@@ -19,7 +18,7 @@
         android:gravity="center_vertical"/>
 
     <Button
-        android:text="Back"
+        android:text="@string/back"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/popup_exit_btn"/>
