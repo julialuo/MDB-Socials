@@ -5,5 +5,6 @@ MDB Socials is an Android app that allows registered users to create new social 
 ## Concepts used
 - Firebase real-time database for storing information about socials
 - Firebase user registration/login and storage upload for images
+- Use of AsyncTasks to perform photo uploading and user registration
 - RecyclerViews to display socials feed and list of RSVP'd users
 - Good coding/mobile dev practices
